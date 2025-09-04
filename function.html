@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级函数图像模拟器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        accent: '#722ED1',
+                        dark: '#1D2129',
+                        light: '#F2F3F5'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-all-300 {
+                transition: all 300ms ease-in-out;
+            }
+            .shadow-soft {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            }
+            .btn-hover {
+                @apply hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200;
+            }
+            .symbol-btn {
+                @apply px-2 py-1.5 rounded-md bg-light hover:bg-gray-200 text-dark text-sm font-medium btn-hover;
+            }
+            .grid-symbols {
+                @apply grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 gap-1.5 my-2;
+            }
+            .tooltip {
+                @apply absolute bg-dark/90 text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap z-10 transition-opacity duration-200;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-inter text-dark min-h-screen flex flex-col">
+<!-- 顶部导航栏 -->
+<header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <i class="fa fa-line-chart text-primary text-2xl"></i>
+            <h1 class="text-xl font-bold text-primary">函数图像模拟器</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 transition-all">
+                <i class="fa fa-moon-o text-gray-600"></i>
+            </button>
+            <button id="help-btn" class="p-2 rounded-full hover:bg-gray-100 transition-all">
+                <i class="fa fa-question text-gray-600"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- 主要内容区 -->
+<main class="flex-grow container mx-auto px-4 py-6 md:py-8">
+    <!-- 输入区域 -->
+    <div class="bg-white rounded-xl shadow-soft p-4 md:p-6 mb-6 transform transition-all duration-300 hover:shadow-lg">
+        <div class="mb-4">
+            <label for="function-input" class="block text-sm font-medium text-gray-700 mb-1">输入函数表达式 (例如: sin(x), x^2 + 3x - 5)</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input
+                        type="text"
+                        id="function-input"
+                        placeholder="f(x) = "
+                        class="flex-grow px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
+                        value="sin(x)"
+                >
+                <button id="plot-btn" class="bg-primary text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center btn-hover">
+                    <i class="fa fa-paint-brush mr-2"></i> 绘制图像
+                </button>
+            </div>
+        </div>
+
+        <!-- 快捷符号按钮组 -->
+        <div class="mb-4">
+            <p class="text-sm font-medium text-gray-700 mb-2">快捷符号:</p>
+
+            <!-- 基本运算符 -->
+            <div class="grid-symbols">
+                <button class="symbol-btn" data-char="^">^ (幂)</button>
+                <button class="symbol-btn" data-char="√">√ (根号)</button>
+                <button class="symbol-btn" data-char="π">π (圆周率)</button>
+                <button class="symbol-btn" data-char="e">e (自然常数)</button>
+                <button class="symbol-btn" data-char="×">× (乘)</button>
+                <button class="symbol-btn" data-char="÷">÷ (除)</button>
+                <button class="symbol-btn" data-char="≤">≤</button>
+                <button class="symbol-btn" data-char="≥">≥</button>
+            </div>
+
+            <!-- 三角函数 -->
+            <div class="grid-symbols">
+                <button class="symbol-btn" data-char="sin(x)">sin(x)</button>
+                <button class="symbol-btn" data-char="cos(x)">cos(x)</button>
+                <button class="symbol-btn" data-char="tan(x)">tan(x)</button>
+                <button class="symbol-btn" data-char="arcsin(x)">arcsin(x)</button>
+                <button class="symbol-btn" data-char="arccos(x)">arccos(x)</button>
+                <button class="symbol-btn" data-char="arctan(x)">arctan(x)</button>
+                <button class="symbol-btn" data-char="sinh(x)">sinh(x)</button>
+                <button class="symbol-btn" data-char="cosh(x)">cosh(x)</button>
+                <button class="symbol-btn" data-char="tanh(x)">tanh(x)</button>
+            </div>
+
+            <!-- 其他函数 -->
+            <div class="grid-symbols">
+                <button class="symbol-btn" data-char="log(x)">log(x)</button>
+                <button class="symbol-btn" data-char="ln(x)">ln(x)</button>
+                <button class="symbol-btn" data-char="abs(x)">abs(x) (绝对值)</button>
+                <button class="symbol-btn" data-char="exp(x)">exp(x) (e^x)</button>
+                <button class="symbol-btn" data-char="floor(x)">floor(x)</button>
+                <button class="symbol-btn" data-char="ceil(x)">ceil(x)</button>
+                <button class="symbol-btn" data-char="sqrt(x)">sqrt(x)</button>
+                <button class="symbol-btn" data-char="factorial(x)">factorial(x)</button>
+            </div>
+        </div>
+
+        <!-- 图像范围控制 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">X轴范围</label>
+                <div class="flex gap-2">
+                    <input type="number" id="x-min" value="-10" step="0.5" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                    <span class="flex items-center">至</span>
+                    <input type="number" id="x-max" value="10" step="0.5" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Y轴范围</label>
+                <div class="flex gap-2">
+                    <input type="number" id="y-min" value="-10" step="0.5" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                    <span class="flex items-center">至</span>
+                    <input type="number" id="y-max" value="10" step="0.5" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+            </div>
+        </div>
+
+        <!-- 高级选项 -->
+        <div class="mb-2">
+            <button id="advanced-options-toggle" class="text-primary text-sm flex items-center">
+                <i class="fa fa-sliders mr-1"></i> 高级选项
+                <i class="fa fa-chevron-down ml-1 text-xs transition-transform duration-300"></i>
+            </button>
+        </div>
+
+        <div id="advanced-options" class="hidden bg-gray-50 p-4 rounded-lg mb-2">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="precision" class="block text-sm font-medium text-gray-700 mb-1">绘图精度 (点密度)</label>
+                    <input type="number" id="precision" value="1000" min="100" max="10000" step="100" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label for="line-color" class="block text-sm font-medium text-gray-700 mb-1">线条颜色</label>
+                    <input type="color" id="line-color" value="#165DFF" class="w-full h-10 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label for="line-width" class="block text-sm font-medium text-gray-700 mb-1">线条宽度</label>
+                    <input type="number" id="line-width" value="2" min="1" max="10" step="0.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能按钮组 -->
+        <div class="flex flex-wrap gap-2">
+            <button id="clear-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium btn-hover">
+                <i class="fa fa-eraser mr-1"></i> 清除图像
+            </button>
+            <button id="zoom-in-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium btn-hover">
+                <i class="fa fa-search-plus mr-1"></i> 放大
+            </button>
+            <button id="zoom-out-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium btn-hover">
+                <i class="fa fa-search-minus mr-1"></i> 缩小
+            </button>
+            <button id="reset-view-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium btn-hover">
+                <i class="fa fa-refresh mr-1"></i> 重置视图
+            </button>
+            <button id="save-btn" class="bg-accent text-white px-4 py-2 rounded-lg font-medium btn-hover">
+                <i class="fa fa-download mr-1"></i> 保存图像
+            </button>
+        </div>
+    </div>
+
+    <!-- 图像显示区域 -->
+    <div class="bg-white rounded-xl shadow-soft p-4 md:p-6 transform transition-all duration-300 hover:shadow-lg">
+        <div class="relative">
+            <canvas id="graph-canvas" class="w-full rounded-lg border border-gray-200"></canvas>
+            <div id="point-tooltip" class="tooltip opacity-0"></div>
+
+            <!-- 加载指示器 -->
+            <div id="loading-indicator" class="hidden absolute inset-0 bg-black/5 rounded-lg flex items-center justify-center">
+                <div class="bg-white p-4 rounded-lg flex items-center">
+                    <i class="fa fa-circle-o-notch fa-spin text-primary mr-2"></i>
+                    <span>正在绘制图像...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 坐标信息显示 -->
+        <div class="mt-3 flex flex-wrap justify-between items-center text-sm text-gray-600">
+            <div id="coord-info">鼠标位置: (x: --, y: --)</div>
+            <div id="function-info">当前函数: f(x) = sin(x)</div>
+        </div>
+    </div>
+
+    <!-- 函数示例区域 -->
+    <div class="mt-6 bg-white rounded-xl shadow-soft p-4 md:p-6">
+        <h2 class="text-lg font-semibold mb-3">示例函数</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            <button class="example-function px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm" data-func="sin(x)">正弦函数: sin(x)</button>
+            <button class="example-function px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm" data-func="cos(x)">余弦函数: cos(x)</button>
+            <button class="example-function px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm" data-func="x^2">二次函数: x²</button>
+            <button class="example-function px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm" data-func="x^3 - 3x">三次函数: x³ - 3x</button>
+            <button class="example-function px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm" data-func="e^x">指数函数: eˣ</button>
+            <button class="example-function px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm" data-func="ln(x)">自然对数: ln(x)</button>
+            <button class="example-function px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm" data-func="sin(π*x)">含π的函数: sin(πx)</button>
+            <button class="example-function px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm" data-func="tan(x)">正切函数: tan(x)</button>
+            <button class="example-function px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm" data-func="abs(sin(x))">绝对值正弦</button>
+        </div>
+    </div>
+</main>
+
+<!-- 帮助模态框 -->
+<div id="help-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold">使用帮助</h2>
+                <button id="close-help" class="text-gray-500 hover:text-gray-700">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <h3 class="font-semibold text-lg mb-2">基本用法</h3>
+            <p class="mb-3 text-gray-700">在输入框中输入函数表达式，然后点击"绘制图像"按钮即可生成函数图像。</p>
+
+            <h3 class="font-semibold text-lg mb-2 mt-4">支持的函数</h3>
+            <ul class="list-disc pl-5 mb-3 text-gray-700 space-y-1">
+                <li>基本运算: +, -, ×, ÷, ^ (幂运算)</li>
+                <li>三角函数: sin, cos, tan, arcsin, arccos, arctan</li>
+                <li>双曲函数: sinh, cosh, tanh</li>
+                <li>对数函数: log (以10为底), ln (自然对数)</li>
+                <li>其他函数: exp, abs, sqrt, floor, ceil, factorial</li>
+                <li>常数: π (圆周率), e (自然常数)</li>
+            </ul>
+
+            <h3 class="font-semibold text-lg mb-2 mt-4">示例表达式</h3>
+            <ul class="list-disc pl-5 mb-3 text-gray-700 space-y-1">
+                <li>二次函数: x^2 + 3x - 5</li>
+                <li>三角函数: sin(2x) + cos(x/2)</li>
+                <li>指数函数: e^(-x^2)</li>
+                <li>含π的函数: sin(π*x) 或 cos(π*x/2)</li>
+                <li>对数函数: ln(x+5) (注意定义域x > -5)</li>
+                <li>复合函数: sin(x^2) + cos(2x)</li>
+            </ul>
+
+            <h3 class="font-semibold text-lg mb-2 mt-4">快捷键</h3>
+            <ul class="list-disc pl-5 text-gray-700 space-y-1">
+                <li>Enter: 绘制图像</li>
+                <li>Esc: 关闭帮助窗口</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- 底部信息 -->
+<footer class="bg-white border-t border-gray-200 py-4 mt-8">
+    <div class="container mx-auto px-4 text-center text-sm text-gray-500">
+        <p>函数图像模拟器 | 大学生无聊做着玩的</p>
+    </div>
+</footer>
+
+<script>
+    // DOM元素引用
+    const canvas = document.getElementById('graph-canvas');
+    const ctx = canvas.getContext('2d');
+    const functionInput = document.getElementById('function-input');
+    const plotBtn = document.getElementById('plot-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const xMinInput = document.getElementById('x-min');
+    const xMaxInput = document.getElementById('x-max');
+    const yMinInput = document.getElementById('y-min');
+    const yMaxInput = document.getElementById('y-max');
+    const precisionInput = document.getElementById('precision');
+    const lineColorInput = document.getElementById('line-color');
+    const lineWidthInput = document.getElementById('line-width');
+    const zoomInBtn = document.getElementById('zoom-in-btn');
+    const zoomOutBtn = document.getElementById('zoom-out-btn');
+    const resetViewBtn = document.getElementById('reset-view-btn');
+    const saveBtn = document.getElementById('save-btn');
+    const coordInfo = document.getElementById('coord-info');
+    const functionInfo = document.getElementById('function-info');
+    const advancedOptionsToggle = document.getElementById('advanced-options-toggle');
+    const advancedOptions = document.getElementById('advanced-options');
+    const helpBtn = document.getElementById('help-btn');
+    const helpModal = document.getElementById('help-modal');
+    const closeHelpBtn = document.getElementById('close-help');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const themeToggle = document.getElementById('theme-toggle');
+    const exampleFunctions = document.querySelectorAll('.example-function');
+    const symbolButtons = document.querySelectorAll('.symbol-btn');
+    const pointTooltip = document.getElementById('point-tooltip');
+
+    // 存储函数点数据，用于鼠标悬停检测
+    let functionPoints = [];
+    let isDarkMode = false;
+    let currentFunction = 'sin(x)';
+    let originalXMin, originalXMax, originalYMin, originalYMax;
+
+    // 中英文符号映射表
+    const symbolMap = {
+        '（': '(',
+        '）': ')',
+        '，': ',',
+        '；': ';',
+        '。': '.',
+        '＋': '+',
+        '－': '-',
+        '＊': '*',
+        '／': '/'
+    };
+
+    // 转换中英文符号
+    function convertSymbols(input) {
+        let result = input;
+        for (const [chinese, english] of Object.entries(symbolMap)) {
+            result = result.replace(new RegExp(chinese, 'g'), english);
+        }
+        return result;
+    }
+
+    // 设置Canvas尺寸
+    function resizeCanvas() {
+        const container = canvas.parentElement;
+        const width = container.clientWidth;
+        const height = Math.min(width * 0.75, 600); // 保持4:3的比例，最大高度600
+
+        // 设置canvas的实际尺寸（考虑高DPI屏幕）
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+
+        // 缩放上下文以匹配高DPI
+        ctx.scale(dpr, dpr);
+
+        // 重绘图像
+        if (currentFunction) {
+            if (currentFunction === 'ln(x)') {
+                plotLnFunction();
+            } else {
+                plotFunction();
+            }
+        }
+    }
+
+    // 初始化
+    function init() {
+        // 保存初始视图范围
+        originalXMin = parseFloat(xMinInput.value);
+        originalXMax = parseFloat(xMaxInput.value);
+        originalYMin = parseFloat(yMinInput.value);
+        originalYMax = parseFloat(yMaxInput.value);
+
+        // 调整Canvas尺寸
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // 绘制初始函数
+        plotFunction();
+
+        // 事件监听
+        plotBtn.addEventListener('click', plotFunction);
+        clearBtn.addEventListener('click', clearCanvas);
+        zoomInBtn.addEventListener('click', zoomIn);
+        zoomOutBtn.addEventListener('click', zoomOut);
+        resetViewBtn.addEventListener('click', resetView);
+        saveBtn.addEventListener('click', saveImage);
+        advancedOptionsToggle.addEventListener('click', toggleAdvancedOptions);
+        helpBtn.addEventListener('click', () => helpModal.classList.replace('hidden', 'flex'));
+        closeHelpBtn.addEventListener('click', () => helpModal.classList.replace('flex', 'hidden'));
+        themeToggle.addEventListener('click', toggleTheme);
+
+        // 按Enter键绘制图像
+        functionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                plotFunction();
+            }
+        });
+
+        // 输入时自动转换符号
+        functionInput.addEventListener('input', (e) => {
+            const start = e.target.selectionStart;
+            const end = e.target.selectionEnd;
+            e.target.value = convertSymbols(e.target.value);
+            // 恢复光标位置
+            e.target.selectionStart = start;
+            e.target.selectionEnd = end;
+        });
+
+        // 按Esc键关闭帮助
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !helpModal.classList.contains('hidden')) {
+                helpModal.classList.replace('flex', 'hidden');
+            }
+        });
+
+        // 符号按钮点击事件
+        symbolButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const char = btn.getAttribute('data-char');
+                insertAtCursor(functionInput, char);
+                functionInput.focus();
+            });
+        });
+
+        // 示例函数点击事件：判断若为ln(x)则调用plotLnFunction
+        exampleFunctions.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const func = btn.getAttribute('data-func');
+                functionInput.value = func;
+                currentFunction = func;
+                functionInfo.textContent = `当前函数: f(x) = ${currentFunction}`;
+                // 核心判断：若点击的是ln(x)，调用专属绘制函数
+                if (func === 'ln(x)') {
+                    plotLnFunction();
+                } else {
+                    plotFunction();
+                }
+            });
+        });
+
+        // 鼠标移动显示坐标和检测函数点
+        canvas.addEventListener('mousemove', handleMouseMove);
+    }
+
+    // 专门处理ln(x)函数的绘制（修正逻辑，适配定义域和坐标）
+    function plotLnFunction() {
+        // 清空之前的函数点数据（用于鼠标悬停检测）
+        functionPoints = [];
+        // 显示加载指示器
+        loadingIndicator.classList.remove('hidden');
+
+        // 延迟执行，确保UI更新（加载动画显示）
+        setTimeout(() => {
+            try {
+                // 1. 获取配置参数（轴范围、精度、样式）
+                let xMin = parseFloat(xMinInput.value);
+                let xMax = parseFloat(xMaxInput.value);
+                const yMin = parseFloat(yMinInput.value);
+                const yMax = parseFloat(yMaxInput.value);
+                const precision = parseInt(precisionInput.value);
+                const lineColor = lineColorInput.value;
+                const lineWidth = parseFloat(lineWidthInput.value);
+                const rect = canvas.getBoundingClientRect(); // 获取画布尺寸
+
+                // 2. 强制处理ln函数定义域：x > 0（自动调整无效范围）
+                if (xMin <= 0) {
+                    xMin = 0.1; // 最小有效值（避免ln(0)无意义）
+                    xMinInput.value = xMin;
+                    alert(`ln函数定义域为x > 0，已自动将x轴最小值调整为 ${xMin}`);
+                }
+                if (xMax <= xMin) {
+                    xMax = xMin + 10; // 确保xMax大于xMin
+                    xMaxInput.value = xMax;
+                    alert(`x轴最大值需大于最小值，已自动调整为 ${xMax}`);
+                }
+                const finalXMin = xMin;
+                const finalXMax = xMax;
+
+                // 3. 清空画布 + 绘制坐标轴/网格（适配主题）
+                ctx.clearRect(0, 0, rect.width, rect.height);
+                drawAxesAndGrid(finalXMin, finalXMax, yMin, yMax);
+
+                // 4. 初始化画笔样式
+                ctx.beginPath();
+                ctx.strokeStyle = lineColor;
+                ctx.lineWidth = lineWidth;
+                let isFirstPoint = true; // 标记第一个有效点（用于moveTo）
+                let lastValidY = null;   // 记录上一个有效y值（处理边界截断）
+
+                // 5. 遍历x值，计算ln(x)并绘制曲线
+                for (let i = 0; i <= precision; i++) {
+                    // 计算当前x值（按精度分割x轴范围）
+                    const x = finalXMin + (i / precision) * (finalXMax - finalXMin);
+                    if (x <= 0) continue; // 跳过定义域外的x值
+
+                    // 计算ln(x)（自然对数核心逻辑）
+                    let y;
+                    try {
+                        y = Math.log(x); // 原生Math.log即自然对数（ln）
+                    } catch (e) {
+                        lastValidY = null;
+                        continue;
+                    }
+
+                    // 过滤无效y值（NaN或无穷大）
+                    if (isNaN(y) || !isFinite(y)) {
+                        lastValidY = null;
+                        continue;
+                    }
+
+                    // 6. 坐标转换：数学坐标 → 画布像素坐标（适配画布尺寸）
+                    const xPixel = ((x - finalXMin) / (finalXMax - finalXMin)) * rect.width;
+                    const yPixel = rect.height - ((y - yMin) / (yMax - yMin)) * rect.height; // Y轴反向
+
+                    // 7. 处理y值超出轴范围的情况（截断到边界）
+                    if ((y > yMax || y < yMin) && lastValidY !== null) {
+                        // 计算曲线与Y轴边界的交点（避免超出部分空白）
+                        const intersection = calculateIntersection(
+                            x, y,
+                            finalXMin + ((i - 1) / precision) * (finalXMax - finalXMin),
+                            lastValidY,
+                            yMin, yMax
+                        );
+                        if (intersection) {
+                            const interXPixel = ((intersection.x - finalXMin) / (finalXMax - finalXMin)) * rect.width;
+                            const interYPixel = rect.height - ((intersection.y - yMin) / (yMax - yMin)) * rect.height;
+                            ctx.lineTo(interXPixel, interYPixel);
+                            // 记录交点（用于鼠标悬停）
+                            functionPoints.push({ x: intersection.x, y: intersection.y, xPixel: interXPixel, yPixel: interYPixel });
+                        }
+                        lastValidY = y;
+                        continue;
+                    }
+
+                    // 8. 绘制路径（第一个点用moveTo，后续用lineTo）
+                    if (isFirstPoint) {
+                        ctx.moveTo(xPixel, yPixel);
+                        isFirstPoint = false;
+                    } else {
+                        ctx.lineTo(xPixel, yPixel);
+                    }
+
+                    // 9. 记录函数点（用于鼠标悬停显示坐标）
+                    functionPoints.push({ x, y, xPixel, yPixel });
+                    lastValidY = y;
+                }
+
+                // 10. 执行绘制（渲染曲线）
+                ctx.stroke();
+                // 更新当前函数信息显示
+                currentFunction = 'ln(x)';
+                functionInfo.textContent = `当前函数: f(x) = ${currentFunction}`;
+            } catch (e) {
+                alert(`绘制ln函数错误: ${e.message}`);
+            } finally {
+                // 隐藏加载指示器
+                loadingIndicator.classList.add('hidden');
+            }
+        }, 10);
+    }
+
+    // 在光标位置插入文本
+    function insertAtCursor(input, text) {
+        const cursorPos = input.selectionStart;
+        const value = input.value;
+
+        input.value =
+            value.substring(0, cursorPos) +
+            text +
+            value.substring(input.selectionEnd);
+
+        // 移动光标到插入文本之后
+        input.selectionStart = cursorPos + text.length;
+        input.selectionEnd = cursorPos + text.length;
+    }
+
+    // 切换高级选项显示
+    function toggleAdvancedOptions() {
+        advancedOptions.classList.toggle('hidden');
+        const icon = advancedOptionsToggle.querySelector('.fa-chevron-down');
+        icon.classList.toggle('rotate-180');
+    }
+
+    // 处理鼠标移动事件
+    function handleMouseMove(e) {
+        const rect = canvas.getBoundingClientRect();
+        const xPixel = e.clientX - rect.left;
+        const yPixel = e.clientY - rect.top;
+
+        const xMin = parseFloat(xMinInput.value);
+        const xMax = parseFloat(xMaxInput.value);
+        const yMin = parseFloat(yMinInput.value);
+        const yMax = parseFloat(yMaxInput.value);
+
+        // 将像素坐标转换为数学坐标
+        const x = xMin + (xPixel / rect.width) * (xMax - xMin);
+        const y = yMax - (yPixel / rect.height) * (yMax - yMin); // Y轴是反的
+
+        // 计算函数值
+        let fOfX = '?';
+        try {
+            if (currentFunction === 'ln(x)') {
+                if (x > 0) {
+                    fOfX = Math.log(x).toFixed(4);
+                }
+            } else {
+                const scope = { x: x };
+                fOfX = math.evaluate(currentFunction, scope).toFixed(4);
+            }
+        } catch (e) {
+            // 不处理错误，保持显示?
+        }
+
+        coordInfo.textContent = `鼠标位置: (x: ${x.toFixed(4)}, y: ${y.toFixed(4)}, f(x): ${fOfX})`;
+
+        // 检测是否靠近函数曲线上的点
+        checkNearFunctionPoint(x, y, xPixel, yPixel, rect);
+    }
+
+    // 检查鼠标是否靠近函数曲线上的点
+    function checkNearFunctionPoint(x, y, xPixel, yPixel, rect) {
+        const threshold = 5; // 像素阈值，小于此值认为靠近
+        let closestPoint = null;
+        let minDistance = Infinity;
+
+        // 寻找最近的函数点
+        for (const point of functionPoints) {
+            // 计算像素距离
+            const dx = xPixel - point.xPixel;
+            const dy = yPixel - point.yPixel;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < threshold && distance < minDistance) {
+                minDistance = distance;
+                closestPoint = point;
+            }
+        }
+
+        // 显示或隐藏提示框
+        if (closestPoint) {
+            const rectCanvas = canvas.getBoundingClientRect();
+            pointTooltip.style.left = `${rectCanvas.left + closestPoint.xPixel + 10}px`;
+            pointTooltip.style.top = `${rectCanvas.top + closestPoint.yPixel - 10}px`;
+            pointTooltip.textContent = `(${closestPoint.x.toFixed(4)}, ${closestPoint.y.toFixed(4)})`;
+            pointTooltip.classList.replace('opacity-0', 'opacity-100');
+        } else {
+            pointTooltip.classList.replace('opacity-100', 'opacity-0');
+        }
+    }
+
+    // 绘制函数图像
+    function plotFunction() {
+        // 新增：识别ln(x)输入，调用专属绘制函数
+        const inputFunc = convertSymbols(functionInput.value.trim()).toLowerCase();
+        if (inputFunc === 'ln(x)' || inputFunc === 'math.log(x)') {
+            plotLnFunction();
+            return; // 终止默认绘制逻辑
+        }
+
+        // 清空之前的函数点数据
+        functionPoints = [];
+
+        // 显示加载指示器
+        loadingIndicator.classList.remove('hidden');
+
+        // 使用setTimeout允许UI更新
+        setTimeout(() => {
+            try {
+                clearCanvas();
+
+                // 获取用户输入的函数并转换符号
+                let functionStr = convertSymbols(functionInput.value.trim());
+                if (!functionStr) {
+                    alert('请输入一个函数表达式');
+                    loadingIndicator.classList.add('hidden');
+                    return;
+                }
+
+                // 处理特殊函数和常量，确保正确解析
+                functionStr = functionStr
+                    .replace(/π/g, 'math.PI')
+                    .replace(/ln\s*\(/g, 'math.log(')  // 支持ln(和ln (
+                    .replace(/log\s*\((.*?)\)/g, 'math.log($1, 10)')  // 支持log(和log (，使用math.log的双参数形式
+                    .replace(/√/g, 'math.sqrt');
+
+                currentFunction = functionInput.value.trim();
+                functionInfo.textContent = `当前函数: f(x) = ${currentFunction}`;
+
+                // 获取参数
+                let xMin = parseFloat(xMinInput.value);
+                let xMax = parseFloat(xMaxInput.value);
+                const yMin = parseFloat(yMinInput.value);
+                const yMax = parseFloat(yMaxInput.value);
+                const precision = parseInt(precisionInput.value);
+                const lineColor = lineColorInput.value;
+                const lineWidth = parseFloat(lineWidthInput.value);
+
+                // 验证参数
+                if (isNaN(xMin) || isNaN(xMax) || isNaN(yMin) || isNaN(yMax) || xMin >= xMax || yMin >= yMax) {
+                    alert('请输入有效的坐标范围');
+                    loadingIndicator.classList.add('hidden');
+                    return;
+                }
+
+                // 特殊处理自然对数等有定义域的函数
+                // 使用正则表达式检查对数函数，支持ln(、ln (、log(和log (
+                const hasLn = /ln\s*\(/.test(currentFunction.toLowerCase());
+                const hasLog = /log\s*\(/.test(currentFunction.toLowerCase());
+                if ((hasLn || hasLog) && xMin <= 0) {
+                    // 对于对数函数，自动调整x范围到合适的定义域
+                    const newXMin = Math.max(0.1, xMin);
+                    const newXMax = Math.max(newXMin + 1, xMax); // 确保范围有效
+
+                    xMinInput.value = newXMin;
+                    xMaxInput.value = newXMax;
+                    xMin = newXMin;
+                    xMax = newXMax;
+
+                    alert(`注意：对数函数的定义域为x > 0，已自动将x轴范围调整为[${newXMin}, ${newXMax}]`);
+                }
+
+                // 绘制坐标轴和网格
+                drawAxesAndGrid(xMin, xMax, yMin, yMax);
+
+                // 准备函数
+                let func;
+                try {
+                    // 编译函数以提高性能
+                    func = math.compile(functionStr);
+                } catch (e) {
+                    alert(`函数解析错误: ${e.message}`);
+                    loadingIndicator.classList.add('hidden');
+                    return;
+                }
+
+                // 计算并绘制函数点
+                ctx.beginPath();
+                ctx.strokeStyle = lineColor;
+                ctx.lineWidth = lineWidth;
+
+                let isFirstPoint = true;
+                let lastValidY = null;
+                let lastValidX = null;
+
+                for (let i = 0; i <= precision; i++) {
+                    // 计算x值
+                    const x = xMin + (i / precision) * (xMax - xMin);
+
+                    // 对自然对数等函数，跳过定义域外的点
+                    // 使用转换后的函数字符串进行检查，确保能匹配ln(和ln (
+                    // 检查对数函数（自然对数和常用对数）的定义域
+                    if (functionStr.includes('math.log(') && x <= 0) {
+                        lastValidY = null;
+                        continue;
+                    }
+
+                    // 计算函数值
+                    let y;
+                    try {
+                        // 确保math对象在作用域中
+                        const scope = { x: x, math: math };
+                        y = func.evaluate(scope);
+
+                        // 对于ln函数，特别处理非常接近0的情况
+                        if (functionStr.includes('math.log(')) {
+                            if (x <= 0) {
+                                console.log('x is <= 0, skipping...');
+                            } else if (x < 1e-10) {
+                                console.log('x is very small, setting y to -Infinity');
+                                y = -Infinity; // 对于非常小的正数，ln(x)接近负无穷
+                            }
+                        }
+                    } catch (error) {
+                        // 处理函数计算错误
+                        console.error('Error calculating function:', error);
+                        lastValidY = null;
+                        continue;
+                    }
+
+                    // 检查是否为有效数值
+                    if (isNaN(y) || !isFinite(y)) {
+                        lastValidY = null;
+                        continue;
+                    }
+
+                    // 对于负无穷，跳过绘制
+                    if (y === -Infinity) {
+                        lastValidY = null;
+                        continue;
+                    }
+
+                    // 如果y超出范围，尝试找到与边界的交点
+                    if (y > yMax || y < yMin) {
+                        if (lastValidY !== null) {
+                            // 计算与边界的交点
+                            const intersection = calculateIntersection(x, y, lastValidX, lastValidY, yMin, yMax);
+                            if (intersection) {
+                                const point = drawPoint(intersection.x, intersection.y, xMin, xMax, yMin, yMax, isFirstPoint);
+                                functionPoints.push(point);
+                                isFirstPoint = false;
+                            }
+                        }
+                        lastValidY = y;
+                        lastValidX = x;
+                        continue;
+                    }
+
+
+                    // 绘制点并保存点数据
+                    const point = drawPoint(x, y, xMin, xMax, yMin, yMax, isFirstPoint);
+                    functionPoints.push(point);
+
+                    isFirstPoint = false;
+                    lastValidY = y;
+                    lastValidX = x;
+                }
+
+                ctx.stroke();
+            } catch (e) {
+                alert(`绘图错误: ${e.message}`);
+            } finally {
+                // 隐藏加载指示器
+                loadingIndicator.classList.add('hidden');
+            }
+        }, 10);
+    }
+
+    // 绘制单个点并返回点数据
+    function drawPoint(x, y, xMin, xMax, yMin, yMax, isFirstPoint) {
+        const rect = canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+
+        // 将数学坐标转换为画布坐标
+        const xPixel = ((x - xMin) / (xMax - xMin)) * width;
+        const yPixel = height - ((y - yMin) / (yMax - yMin)) * height; // Y轴是反的
+
+        if (isFirstPoint) {
+            ctx.moveTo(xPixel, yPixel);
+        } else {
+            ctx.lineTo(xPixel, yPixel);
+        }
+
+        // 返回点数据，用于鼠标悬停检测
+        return { x, y, xPixel, yPixel };
+    }
+
+    // 计算与边界的交点
+    function calculateIntersection(x1, y1, x2, y2, yMin, yMax) {
+        // 检查是否与上边界相交
+        if ((y1 > yMax && y2 <= yMax) || (y1 <= yMax && y2 > yMax)) {
+            const t = (yMax - y1) / (y2 - y1);
+            const x = x1 + t * (x2 - x1);
+            return { x, y: yMax };
+        }
+
+        // 检查是否与下边界相交
+        if ((y1 < yMin && y2 >= yMin) || (y1 >= yMin && y2 < yMin)) {
+            const t = (yMin - y1) / (y2 - y1);
+            const x = x1 + t * (x2 - x1);
+            return { x, y: yMin };
+        }
+
+        return null;
+    }
+
+    // 绘制坐标轴和网格（优化刻度显示）
+    function drawAxesAndGrid(xMin, xMax, yMin, yMax) {
+        const rect = canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const padding = 20; // 边距，防止标签被截断
+
+        // 清除画布
+        ctx.clearRect(0, 0, width, height);
+
+        // 绘制网格
+        ctx.beginPath();
+        ctx.strokeStyle = isDarkMode ? '#374151' : '#e5e7eb';
+        ctx.lineWidth = 0.5;
+
+        // X轴网格
+        const xGridInterval = calculateGridInterval(xMin, xMax);
+        for (let x = Math.ceil(xMin / xGridInterval) * xGridInterval; x <= xMax; x += xGridInterval) {
+            const xPixel = ((x - xMin) / (xMax - xMin)) * width;
+            ctx.moveTo(xPixel, padding); // 从padding开始，避免网格线超出可见区域
+            ctx.lineTo(xPixel, height - padding);
+            ctx.stroke();
+
+            // 绘制刻度标签（优化位置避免遮挡）
+            if (Math.abs(x) > 1e-9) { // 避免显示0点两次
+                ctx.fillStyle = isDarkMode ? '#e5e7eb' : '#374151';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.font = '11px Inter, sans-serif';
+
+                // 对于边界附近的标签，调整位置避免被裁剪
+                let yPos = height - padding;
+                if (xPixel < padding && x < 0) {
+                    ctx.textAlign = 'left';
+                } else if (xPixel > width - padding && x > 0) {
+                    ctx.textAlign = 'right';
+                }
+
+                ctx.fillText(x.toFixed(1), xPixel, yPos);
+            }
+        }
+
+        // Y轴网格
+        const yGridInterval = calculateGridInterval(yMin, yMax);
+        for (let y = Math.ceil(yMin / yGridInterval) * yGridInterval; y <= yMax; y += yGridInterval) {
+            const yPixel = height - ((y - yMin) / (yMax - yMin)) * height;
+            ctx.moveTo(padding, yPixel); // 从padding开始，避免网格线超出可见区域
+            ctx.lineTo(width - padding, yPixel);
+            ctx.stroke();
+
+            // 绘制刻度标签（优化位置避免遮挡）
+            if (Math.abs(y) > 1e-9) { // 避免显示0点两次
+                ctx.fillStyle = isDarkMode ? '#e5e7eb' : '#374151';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.font = '11px Inter, sans-serif';
+
+                // 对于边界附近的标签，调整位置避免被裁剪
+                let xPos = padding;
+                if (yPixel < padding && y > 0) {
+                    ctx.textBaseline = 'top';
+                } else if (yPixel > height - padding && y < 0) {
+                    ctx.textBaseline = 'bottom';
+                }
+
+                ctx.fillText(y.toFixed(1), xPos, yPixel);
+            }
+        }
+
+        // 绘制坐标轴
+        ctx.beginPath();
+        ctx.strokeStyle = isDarkMode ? '#9ca3af' : '#6b7280';
+        ctx.lineWidth = 1.5;
+
+        // X轴
+        let xAxisY;
+        if (yMin <= 0 && 0 <= yMax) {
+            xAxisY = height - ((0 - yMin) / (yMax - yMin)) * height;
+        } else if (0 < yMin) {
+            xAxisY = height - padding;
+        } else {
+            xAxisY = padding;
+        }
+        ctx.moveTo(padding, xAxisY);
+        ctx.lineTo(width - padding, xAxisY);
+
+        // Y轴
+        let yAxisX;
+        if (xMin <= 0 && 0 <= xMax) {
+            yAxisX = ((0 - xMin) / (xMax - xMin)) * width;
+        } else if (0 < xMin) {
+            yAxisX = padding;
+        } else {
+            yAxisX = width - padding;
+        }
+        ctx.moveTo(yAxisX, padding);
+        ctx.lineTo(yAxisX, height - padding);
+
+        ctx.stroke();
+
+        // 绘制原点标签
+        if (xMin <= 0 && 0 <= xMax && yMin <= 0 && 0 <= yMax) {
+            ctx.fillStyle = isDarkMode ? '#e5e7eb' : '#374151';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            ctx.font = '11px Inter, sans-serif';
+            ctx.fillText('0', yAxisX + 5, xAxisY - 5);
+        }
+
+        // 绘制轴标签
+        ctx.font = '12px Inter, sans-serif';
+        ctx.fillStyle = isDarkMode ? '#d1d5db' : '#4b5563';
+
+        // X轴标签
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('x', width - padding, xAxisY + 5);
+
+        // Y轴标签
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('y', yAxisX - 15, padding);
+    }
+
+    // 计算网格间隔（优化刻度显示）
+    function calculateGridInterval(min, max) {
+        const range = max - min;
+        const steps = Math.min(Math.max(Math.floor(range / 2), 5), 15); // 动态调整网格数量，5-15个之间
+        let interval = range / steps;
+
+        // 调整为1, 2, 5, 10等方便阅读的数值
+        const magnitude = Math.pow(10, Math.floor(Math.log10(interval)));
+        const normalized = interval / magnitude;
+
+        let rounded;
+        if (normalized < 1.5) {
+            rounded = 1;
+        } else if (normalized < 3) {
+            rounded = 2;
+        } else if (normalized < 7) {
+            rounded = 5;
+        } else {
+            rounded = 10;
+        }
+
+        return rounded * magnitude;
+    }
+
+    // 清除画布
+    function clearCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        functionPoints = []; // 清空函数点数据
+        drawAxesAndGrid(
+            parseFloat(xMinInput.value),
+            parseFloat(xMaxInput.value),
+            parseFloat(yMinInput.value),
+            parseFloat(yMaxInput.value)
+        );
+    }
+
+    // 放大
+    function zoomIn() {
+        const xMin = parseFloat(xMinInput.value);
+        const xMax = parseFloat(xMaxInput.value);
+        const yMin = parseFloat(yMinInput.value);
+        const yMax = parseFloat(yMaxInput.value);
+
+        const xRange = xMax - xMin;
+        const yRange = yMax - yMin;
+
+        // 缩小范围（放大）
+        xMinInput.value = (xMin + xRange * 0.25).toFixed(1);
+        xMaxInput.value = (xMax - xRange * 0.25).toFixed(1);
+        yMinInput.value = (yMin + yRange * 0.25).toFixed(1);
+        yMaxInput.value = (yMax - yRange * 0.25).toFixed(1);
+
+        if (currentFunction === 'ln(x)') {
+            plotLnFunction();
+        } else {
+            plotFunction();
+        }
+    }
+
+    // 缩小
+    function zoomOut() {
+        const xMin = parseFloat(xMinInput.value);
+        const xMax = parseFloat(xMaxInput.value);
+        const yMin = parseFloat(yMinInput.value);
+        const yMax = parseFloat(yMaxInput.value);
+
+        const xRange = xMax - xMin;
+        const yRange = yMax - yMin;
+
+        // 扩大范围（缩小）
+        xMinInput.value = (xMin - xRange * 0.25).toFixed(1);
+        xMaxInput.value = (xMax + xRange * 0.25).toFixed(1);
+        yMinInput.value = (yMin - yRange * 0.25).toFixed(1);
+        yMaxInput.value = (yMax + yRange * 0.25).toFixed(1);
+
+        if (currentFunction === 'ln(x)') {
+            plotLnFunction();
+        } else {
+            plotFunction();
+        }
+    }
+
+    // 重置视图
+    function resetView() {
+        xMinInput.value = originalXMin;
+        xMaxInput.value = originalXMax;
+        yMinInput.value = originalYMin;
+        yMaxInput.value = originalYMax;
+
+        if (currentFunction === 'ln(x)') {
+            plotLnFunction();
+        } else {
+            plotFunction();
+        }
+    }
+
+    // 保存图像
+    function saveImage() {
+        try {
+            // 创建一个临时链接并触发下载
+            const link = document.createElement('a');
+            link.download = `function-plot-${currentFunction.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (e) {
+            alert(`保存图像失败: ${e.message}`);
+        }
+    }
+
+    // 切换主题
+    function toggleTheme() {
+        isDarkMode = !isDarkMode;
+        const body = document.body;
+        const icon = themeToggle.querySelector('i');
+
+        if (isDarkMode) {
+            body.classList.add('bg-gray-900', 'text-white');
+            body.classList.remove('bg-gray-50', 'text-dark');
+            icon.classList.remove('fa-moon-o');
+            icon.classList.add('fa-sun-o');
+        } else {
+            body.classList.remove('bg-gray-900', 'text-white');
+            body.classList.add('bg-gray-50', 'text-dark');
+            icon.classList.remove('fa-sun-o');
+            icon.classList.add('fa-moon-o');
+        }
+
+        // 重绘以适应新主题
+        if (currentFunction === 'ln(x)') {
+            plotLnFunction();
+        } else {
+            plotFunction();
+        }
+    }
+
+    // 初始化应用
+    window.onload = init;
+</script>
+</body>
+</html>
